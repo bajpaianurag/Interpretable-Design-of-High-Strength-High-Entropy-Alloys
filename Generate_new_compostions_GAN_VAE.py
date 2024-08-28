@@ -1,15 +1,12 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import tensorflow as tf
-from tensorflow.keras.layers import Input, Dense, Lambda, LeakyReLU, BatchNormalization, Flatten, Reshape
+from tensorflow.keras.layers import Input, Dense, LeakyReLU, BatchNormalization
 from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.losses import binary_crossentropy
-from tensorflow.keras import backend as K
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.optimizers import Adam
-
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import ParameterGrid
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Load data
 data = pd.read_csv('alloy_compositions.csv')
@@ -21,55 +18,127 @@ yield_strength = data.iloc[:, 13].values
 scaler_yield = MinMaxScaler()
 yield_normalized = scaler_yield.fit_transform(yield_strength.reshape(-1, 1))
 
-# Generator model
-def build_generator(latent_dim, output_dim):
+# Define the generator, discriminator, and encoder models
+def build_generator(latent_dim, output_dim, layers, units):
     model = Sequential()
-    model.add(Dense(64, input_dim=latent_dim))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(BatchNormalization(momentum=0.8))
-    model.add(Dense(86))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(BatchNormalization(momentum=0.8))
-    model.add(Dense(52))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(BatchNormalization(momentum=0.4))
+    for _ in range(layers):
+        model.add(Dense(units, input_dim=latent_dim))
+        model.add(LeakyReLU(alpha=0.2))
+        model.add(BatchNormalization(momentum=0.8))
+        latent_dim = units
     model.add(Dense(output_dim, activation='tanh'))
     return model
 
-# Discriminator model
-def build_discriminator(input_dim):
+def build_discriminator(input_dim, layers, units):
     model = Sequential()
-    model.add(Dense(52, input_dim=input_dim))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dense(86))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dense(64))
-    model.add(LeakyReLU(alpha=0.2))
+    for _ in range(layers):
+        model.add(Dense(units, input_dim=input_dim))
+        model.add(LeakyReLU(alpha=0.2))
+        input_dim = units
     model.add(Dense(1, activation='sigmoid'))
     return model
 
-# Encoder model
-def build_encoder(input_dim, latent_dim):
+def build_encoder(input_dim, latent_dim, layers, units):
     model = Sequential()
-    model.add(Dense(64, input_dim=input_dim))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dense(52))
-    model.add(LeakyReLU(alpha=0.2))
+    for _ in range(layers):
+        model.add(Dense(units, input_dim=input_dim))
+        model.add(LeakyReLU(alpha=0.2))
+        input_dim = units
     model.add(Dense(latent_dim))
     return model
 
-# Compile GAN
-def build_gan(generator, discriminator):
-    discriminator.compile(loss='binary_crossentropy', optimizer=Adam(0.0002, 0.28), metrics=['accuracy'])
-    z = Input(shape=(latent_dim,))
+def build_gan(generator, discriminator, lr):
+    discriminator.compile(loss='binary_crossentropy', optimizer=Adam(lr), metrics=['accuracy'])
+    z = Input(shape=(generator.input_shape[1],))
     alloy = generator(z)
     discriminator.trainable = False
     validity = discriminator(alloy)
     combined = Model(z, validity)
-    combined.compile(loss='binary_crossentropy', optimizer=Adam(0.0002, 0.28))
+    combined.compile(loss='binary_crossentropy', optimizer=Adam(lr))
     return combined
 
-# Plot 2D latent space
+# Define the hyperparameter grid (latent_dim fixed at 2)
+param_grid1 = {
+    'lr': [0.0001, 0.0002, 0.0005],
+    'batch_size': [32, 64],
+    'generator_layers': [2, 3],
+    'generator_units': [128, 256],
+    'discriminator_layers': [2, 3],
+    'discriminator_units': [128, 256],
+    'epochs': [2000] 
+}
+
+# Initialize grid search
+best_model = None
+best_params = None
+best_loss = float('inf')
+
+# Fixed latent dimension
+latent_dim = 2
+
+# Iterate over each combination of hyperparameters
+for params in ParameterGrid(param_grid):
+    print(f"Testing parameters: {params}")
+    
+    lr = params['lr']
+    batch_size = params['batch_size']
+    generator_layers = params['generator_layers']
+    generator_units = params['generator_units']
+    discriminator_layers = params['discriminator_layers']
+    discriminator_units = params['discriminator_units']
+    epochs = params['epochs']
+    
+    generator = build_generator(latent_dim, input_data.shape[1], generator_layers, generator_units)
+    discriminator = build_discriminator(input_data.shape[1], discriminator_layers, discriminator_units)
+    gan = build_gan(generator, discriminator, lr)
+    encoder = build_encoder(input_data.shape[1], latent_dim, generator_layers, generator_units)
+    
+    # Train the GAN
+    half_batch = int(batch_size / 2)
+    d_losses = []
+    g_losses = []
+    
+    for epoch in range(epochs):
+        idx = np.random.randint(0, input_data.shape[0], half_batch)
+        real_compositions = input_data[idx]
+        noise = np.random.normal(0, 1, (half_batch, latent_dim))
+        fake_compositions = generator.predict(noise)
+        
+        d_loss_real = discriminator.train_on_batch(real_compositions, np.ones((half_batch, 1)))
+        d_loss_fake = discriminator.train_on_batch(fake_compositions, np.zeros((half_batch, 1)))
+        d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+        
+        noise = np.random.normal(0, 1, (batch_size, latent_dim))
+        valid_y = np.array([1] * batch_size)
+        g_loss = gan.train_on_batch(noise, valid_y)
+        
+        d_losses.append(d_loss[0])
+        g_losses.append(g_loss)
+    
+    # Evaluate the final loss (or other metrics)
+    final_loss = np.mean(g_losses[-100:])
+    
+    print(f"Final loss: {final_loss}")
+    
+    # Track the best model
+    if final_loss < best_loss:
+        best_loss = final_loss
+        best_model = (generator, discriminator, gan, encoder)
+        best_params = params
+
+# Output the best parameters
+print(f"Best parameters found: {best_params}")
+
+# Visualizing training losses for the best model
+plt.figure(figsize=(10, 10))
+plt.plot(d_losses, label='Discriminator Loss')
+plt.plot(g_losses, label='Generator Loss')
+plt.xlabel('Number of Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
+
+# Project known compositions into the 2D latent space
 latent_dim = 2
 output_dim = 13
 epochs = 1000
