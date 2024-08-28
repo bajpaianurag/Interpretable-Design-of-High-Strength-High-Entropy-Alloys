@@ -379,6 +379,23 @@ X_data_pred = pd.read_csv('data_for_prediction.csv')
 rf_predictions_pred = rf_model.predict(X_data_pred)
 RELM_predictions_pred = rf_predictions_pred + gb_model.predict(X_data_pred)
 
+
+### Error Analysis
+
+# Create a KDE plot for the dataset
+plt.figure(figsize=(10, 6))
+sns.kdeplot(dataset, shade=True, label="Dataset")
+
+plt.xlabel("RMSE")
+plt.ylabel("Probability")
+plt.legend()
+plt.show()
+
+# Calculate KDE values separately
+kde_values = sns.kdeplot(dataset).get_lines()[0].get_data()
+x_values, y_values = kde_values[0], kde_values[1]
+
+
 ### Explaining the RELM
 
 feature_names = X_train_scaled.columns.tolist()
