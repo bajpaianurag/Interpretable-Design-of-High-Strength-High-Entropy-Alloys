@@ -34,7 +34,7 @@ from itertools import permutations
 import csv
 
 
-### Data input and preprocessing 
+# Data input and preprocessing 
 data = pd.read_csv('input_dataset.csv')
 
 # split into features and target variable
@@ -162,7 +162,6 @@ for name, (model, search_space) in models1.items():
     if mse < best_score:
         best_score = mse
         best_model = model.best_estimator_
-
 
 # Initialize the residuals dictionary to store errors for each model
 residuals = {}
