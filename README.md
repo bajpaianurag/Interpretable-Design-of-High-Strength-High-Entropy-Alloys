@@ -8,7 +8,9 @@
 
   	o	Tree-based Feature Selection: Tree-based models (RandomForest, GradientBoosting) are used to rank features based on their importance.
 
-3.	Generate_new_compostions_GAN_VAE.py contains Python code to generate new alloy compositions using a hybrid Generative Adversarial Network (GAN) and Variational Autoencoder (VAE) approach. 
+
+
+2.	Generate_new_compostions_GAN_VAE.py contains Python code to generate new alloy compositions using a hybrid Generative Adversarial Network (GAN) and Variational Autoencoder (VAE) approach. 
 
   	o	Generator Model: This model takes a latent dimension (a random vector) as input and generates new alloy compositions. The architecture consists of multiple layers of dense neurons with LeakyReLU activations and batch normalization to stabilize training.
 
@@ -16,6 +18,9 @@
 
   	o	Encoder Model: As part of the VAE framework, the encoder compresses the input data (alloy compositions) into a latent space representation, which the generator can later use to produce new samples.
 
+
 Once trained, the GAN and VAE models can be used to generate new alloy compositions by sampling from the learned latent space. The generator creates new data, while the discriminator ensures that the compositions are realistic. The idea behind combining GANs and VAEs is to leverage the generative power of both architectures, ensuring that the generated compositions resemble the real dataset while exploring new regions of the composition space.
 
-5.	RELM_Establishment_Training_Predictions_Explaninable_Interpretations.py is focused on the establishment, training, and prediction of models within the context of the Residual Hybrid Learning Model (RELM). BayesSearchCV is used for Bayesian optimization of hyperparameters to improve model performance. RELM integrates predictions from multiple models (ensemble, kernel-based, and neural networks) in a residual learning framework, where each model improves upon the errors (residuals) of the previous models. This framework is focused on creating highly explainable predictions for materials science data, particularly where model performance and interpretability are critical for decision-making.
+
+
+3.	RELM_Establishment_Training_Predictions_Explaninable_Interpretations.py is focused on the establishment, training, and prediction of models within the context of the Residual Hybrid Learning Model (RELM). BayesSearchCV is used for Bayesian optimization of hyperparameters to improve model performance. RELM integrates predictions from multiple models (ensemble, kernel-based, and neural networks) in a residual learning framework, where each model improves upon the errors (residuals) of the previous models. This framework is focused on creating highly explainable predictions for materials science data, particularly where model performance and interpretability are critical for decision-making.
