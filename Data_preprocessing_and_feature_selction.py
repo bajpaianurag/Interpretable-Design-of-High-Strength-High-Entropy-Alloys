@@ -19,10 +19,8 @@ import random
 # Load the dataset
 data = pd.read_csv("your_csv_file.csv")
 
-
 # Check for missing values
 print("Missing values:\n", data.isnull().sum())
-
 
 # Descriptive statistics
 print("Descriptive statistics:\n", data.describe())
@@ -45,7 +43,6 @@ ax = plt.gca()
 ax.tick_params(axis="both", which="major", width=3)
 sns.despine()
 plt.savefig('histogram_YS.png', dpi=1000, bbox_inches='tight')
-
 
 # Create a grid of sub scatter plots
 plt.figure(figsize=(12, 8))
